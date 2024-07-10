@@ -29,27 +29,7 @@ class Users(APIView):
             return Response(data)
         except:
             return Response({'result':'Users not found'})
-        
 
-class PostsView(APIView):
-    def get(self, request: Request) -> Response:
-        posts = Post.objects.all()
-        serializer = PostSerializer(posts, many=True)
-
-        return Response({"posts": serializer.data})
-    
-
-class PostView(APIView):
-    def get(self, request: Request, id: int) -> Response:
-        try:
-            post = Post.objects.get(id=id)
-            serializer = PostSerializer(post)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except:
-            return Response({"Status": "This post doesn't exist."}, status=status.HTTP_404_NOT_FOUND)
-        
-
-class CreateUser(APIView):
     def post(self,request):
         data=request.data
         username=data.get('username', None)
@@ -70,4 +50,45 @@ class CreateUser(APIView):
             )
             user.save()
             return Response({ "message": "User created successfully." },status=status.HTTP_201_CREATED)
+        
 
+class PostsView(APIView):
+    def get(self, request: Request) -> Response:
+        posts = Post.objects.all()
+        serializer = PostSerializer(posts, many=True)
+
+        return Response({"posts": serializer.data})
+    
+    def post(self, request: Request) -> Response:
+        data = request.data
+        title = data.get('title', None)
+        content = data.get('content', None)
+        author = data.get('author', None)
+
+        if title==None or content==None or author==None:
+            return Response({"error": "You have to fill all fields!"})
+        else:
+            try:
+                user = User.objects.get(id=int(author))
+            except User.DoesNotExist:
+                user = None
+                return Response({"error": "User didn't find."})
+
+            if user is not None:
+                blog = Post.objects.create(
+                    title = title,
+                    content = content,
+                    author = user
+                )
+                blog.save()
+                return Response({"message": "Blog successufully created."}, status=status.HTTP_201_CREATED)
+    
+
+class PostView(APIView):
+    def get(self, request: Request, id: int) -> Response:
+        try:
+            post = Post.objects.get(id=id)
+            serializer = PostSerializer(post)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except:
+            return Response({"Status": "This post doesn't exist."}, status=status.HTTP_404_NOT_FOUND)
