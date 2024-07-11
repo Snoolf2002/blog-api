@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
@@ -53,14 +54,19 @@ class Users(APIView):
         
 
 class PostsView(APIView):
+    permission_classes = (IsAuthenticated,)
+
     def get(self, request: Request) -> Response:
-        posts = Post.objects.all()
+        user = request.user
+        posts = Post.objects.filter(author=user)
         serializer = PostSerializer(posts, many=True)
 
         return Response({"posts": serializer.data})
     
     def post(self, request: Request) -> Response:
         data = request.data
+        user = request.user
+        data["author"] = user.id
         serializer = PostSerializer(data=data)
 
         if serializer.is_valid():
@@ -91,9 +97,12 @@ class PostsView(APIView):
     
 
 class PostView(APIView):
+    permission_classes = [IsAuthenticated, ]
+
     def get(self, request: Request, id: int) -> Response:
+        user = request.user
         try:
-            post = Post.objects.get(id=id)
+            post = Post.objects.get(id=id, author=user.id)
             serializer = PostSerializer(post)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except:
